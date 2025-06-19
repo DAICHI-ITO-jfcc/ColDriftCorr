@@ -9,7 +9,6 @@ from PyQt5.QtWidgets import (
 from napari import Viewer
 from napari._qt.qt_viewer import QtViewer
 from scipy.optimize import curve_fit
-from contextlib import contextmanager
 
 
 class DualViewerWindow(QWidget):
@@ -78,8 +77,6 @@ class DualViewerWindow(QWidget):
         toggle_btn.clicked.connect(self.toggle_interpolated_visibility)
         control_layout.addWidget(toggle_btn)
 
-        control_panel.setLayout(control_layout)
-        layout.addWidget(control_panel)
 
         start_end_layout = QHBoxLayout()
         self.spin_start = QSpinBox()
@@ -176,7 +173,7 @@ class DualViewerWindow(QWidget):
         save_btn2.clicked.connect(self.save_refined_stack)
         save_layout.addWidget(save_btn2)
         control_layout.addLayout(save_layout)
-        
+
         control_panel.setLayout(control_layout)
         layout.addWidget(control_panel)
 
@@ -237,8 +234,6 @@ class DualViewerWindow(QWidget):
             print(f"✅ Saved Gaussian corrected stack to: {path}")
 
 
-        control_panel.setLayout(control_layout)
-        layout.addWidget(control_panel)
 
     def toggle_coarse(self, checked):
         self.coarse = checked
@@ -480,7 +475,8 @@ class DualViewerWindow(QWidget):
 
 
 
-app = QApplication(sys.argv)
-window = DualViewerWindow()
-window.show()
-app.exec_()
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = DualViewerWindow()
+    window.show()
+    app.exec_()
