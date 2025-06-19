@@ -40,6 +40,9 @@ class DualViewerWindow(QWidget):
         self.point_layer = self.viewer_raw.add_points(name="atom_positions", ndim=3, size=3, face_color="red")
         self.point_layer.editable = True
         self.point_layer.events.data.connect(lambda e: self.update_corrected())
+        # Dragging on an existing point should move it instead of creating a new one
+        # when the layer is in add mode. Register a custom callback to handle this.
+        self.point_layer.mouse_drag_callbacks.insert(0, self._move_or_add_callback)
 
         # 補完ポイント用レイヤー（可視／不可視切替）
         self.interp_layer = self.viewer_raw.add_points(name="interpolated", ndim=3, size=3, face_color="yellow")
@@ -64,6 +67,24 @@ class DualViewerWindow(QWidget):
     def update_patch_size(self, value):
         if value % 2 == 1:
             self.patch_size = value
+
+    def _move_or_add_callback(self, layer, event):
+        """Move existing points when dragging in add mode."""
+        original_mode = layer.mode
+        moved = False
+        index = layer.get_value(event)
+        if original_mode == "add" and index is not None:
+            layer.mode = "select"
+            layer.selected_data = {index}
+            moved = True
+        try:
+            yield
+            while event.type != "mouse_release":
+                yield
+        finally:
+            if moved:
+                layer.selected_data = set()
+            layer.mode = "add"
 
     def setup_control_panel(self, layout):
         control_panel = QGroupBox("Point Movement Controller")
