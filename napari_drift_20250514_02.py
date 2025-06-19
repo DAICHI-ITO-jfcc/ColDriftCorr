@@ -335,7 +335,7 @@ class DualViewerWindow(QWidget):
     
         H, W = images.shape[1:]
         points = self.interpolate_points_only_for_processing(self.point_layer.data)
-        df = pd.DataFrame(points, columns=["frame", "y", "x"])  # ← 修正済み
+        df = pd.DataFrame(points, columns=["frame", "y", "x"])
         df["frame"] = df["frame"].astype(int)
         df = df.sort_values("frame")
 
