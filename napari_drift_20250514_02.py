@@ -195,7 +195,9 @@ class DualViewerWindow(QWidget):
             return
 
         points = self.point_layer.data.copy()
-        filtered_points = np.array([p for p in points if not (start <= int(p[0]) <= end)])
+        filtered_points = np.array([
+            p for p in points if not (start <= int(p[0]) <= end)
+        ]).reshape(-1, 3)
         self.point_layer.data = filtered_points
 
     def export_csv_tentative(self):
@@ -277,7 +279,9 @@ class DualViewerWindow(QWidget):
     
         # 実処理用補間 + 補間点をinterpolatedレイヤーに表示
         interp_points = self.interpolate_points_only_for_processing(raw_points)
-        self.interp_layer.data = np.array([p for p in interp_points if p.tolist() not in raw_points.tolist()])
+        self.interp_layer.data = np.array([
+            p for p in interp_points if p.tolist() not in raw_points.tolist()
+        ]).reshape(-1, 3)
     
         images = self.get_input_images()
         if images is None or images.ndim != 3:
