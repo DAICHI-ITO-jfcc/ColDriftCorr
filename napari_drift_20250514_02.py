@@ -39,12 +39,13 @@ class DualViewerWindow(QWidget):
         # --- Points Layers ---
         self.point_layer = self.viewer_raw.add_points(name="atom_positions", ndim=3, size=3, face_color="red")
         self.point_layer.editable = True
-        self.point_layer.events.data.connect(lambda e: self.update_corrected())
+        self.point_layer.events.data.connect(lambda e: self.on_point_layer_changed())
 
         # 補完ポイント用レイヤー（可視／不可視切替）
         self.interp_layer = self.viewer_raw.add_points(name="interpolated", ndim=3, size=3, face_color="yellow")
         self.interp_layer.visible = False
-        self.interp_layer.editable = False
+        self.interp_layer.editable = True
+        self.interp_layer.events.data.connect(lambda e: self.update_corrected())
 
         # --- Slider Sync ---
         self.viewer_raw.dims.events.current_step.connect(
@@ -64,6 +65,18 @@ class DualViewerWindow(QWidget):
     def update_patch_size(self, value):
         if value % 2 == 1:
             self.patch_size = value
+
+    def on_point_layer_changed(self):
+        self.recalculate_interpolated_points()
+
+    def recalculate_interpolated_points(self):
+        points = self.point_layer.data
+        if len(points) < 2:
+            self.interp_layer.data = np.empty((0, 3))
+            return
+        interp_points = self.interpolate_points_only_for_processing(points)
+        interp_only = [p for p in interp_points if p.tolist() not in points.tolist()]
+        self.interp_layer.data = np.array(interp_only)
 
     def setup_control_panel(self, layout):
         control_panel = QGroupBox("Point Movement Controller")
@@ -272,18 +285,15 @@ class DualViewerWindow(QWidget):
 
     def update_corrected(self):
         raw_points = self.point_layer.data
-        if len(raw_points) < 2:
+        interp_points = self.interp_layer.data
+        if len(raw_points) + len(interp_points) < 2:
             return
-    
-        # 実処理用補間 + 補間点をinterpolatedレイヤーに表示
-        interp_points = self.interpolate_points_only_for_processing(raw_points)
-        self.interp_layer.data = np.array([p for p in interp_points if p.tolist() not in raw_points.tolist()])
-    
+
         images = self.get_input_images()
         if images is None or images.ndim != 3:
             return
-    
-        points = interp_points
+
+        points = np.vstack([raw_points, interp_points]) if len(interp_points) > 0 else raw_points
         df = pd.DataFrame(points, columns=["frame", "y", "x"])
         df["frame"] = df["frame"].astype(int)
         df = df.sort_values("frame")
@@ -334,7 +344,10 @@ class DualViewerWindow(QWidget):
             return
     
         H, W = images.shape[1:]
-        points = self.interpolate_points_only_for_processing(self.point_layer.data)
+        points = np.vstack([
+            self.point_layer.data,
+            self.interp_layer.data
+        ]) if len(self.interp_layer.data) > 0 else self.point_layer.data
         df = pd.DataFrame(points, columns=["frame", "y", "x"])  # ← 修正済み
         df["frame"] = df["frame"].astype(int)
         df = df.sort_values("frame")
